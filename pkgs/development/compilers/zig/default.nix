@@ -1,6 +1,7 @@
 {
   lib,
   callPackage,
+  llvmPackages_16,
   llvmPackages_17,
   llvmPackages_18,
   llvmPackages_19,
@@ -16,9 +17,9 @@ let
       llvmPackages = llvmPackages_18;
       hash = "sha256-5qSiTq+UWGOwjDVZMIrAt2cDKHkyNPBSAEjpRQUByFM=";
     };
-    "0.14.1" = {
+    "0.14.0" = {
       llvmPackages = llvmPackages_19;
-      hash = "sha256-DhVJIY/z12PJZdb5j4dnCRb7k1CmeQVOnayYRP8azDI=";
+      hash = "sha256-VyteIp5ZRt6qNcZR68KmM7CvN2GYf8vj5hP+gHLkuVk=";
     };
   } // zigVersions;
 
