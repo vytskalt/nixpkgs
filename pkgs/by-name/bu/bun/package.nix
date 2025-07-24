@@ -1,42 +1,31 @@
-{
-  lib,
-  stdenvNoCC,
-  fetchurl,
-  autoPatchelfHook,
-  unzip,
-  installShellFiles,
-  makeWrapper,
-  openssl,
-  writeShellScript,
-  curl,
-  jq,
-  common-updater-scripts,
-  cctools,
-  darwin,
-  rcodesign,
+{ lib
+, stdenvNoCC
+, fetchurl
+, autoPatchelfHook
+, unzip
+, installShellFiles
+, makeWrapper
+, openssl
+, writeShellScript
+, curl
+, jq
+, common-updater-scripts
+, darwin
 }:
 
 stdenvNoCC.mkDerivation rec {
-  version = "1.2.18";
+  version = "1.2.4";
   pname = "bun";
 
-  src =
-    passthru.sources.${stdenvNoCC.hostPlatform.system}
-      or (throw "Unsupported system: ${stdenvNoCC.hostPlatform.system}");
+  src = passthru.sources.${stdenvNoCC.hostPlatform.system} or (throw "Unsupported system: ${stdenvNoCC.hostPlatform.system}");
 
-  sourceRoot =
-    {
-      aarch64-darwin = "bun-darwin-aarch64";
-      x86_64-darwin = "bun-darwin-x64-baseline";
-    }
-    .${stdenvNoCC.hostPlatform.system} or null;
+  sourceRoot = {
+    aarch64-darwin = "bun-darwin-aarch64";
+    x86_64-darwin = "bun-darwin-x64-baseline";
+  }.${stdenvNoCC.hostPlatform.system} or null;
 
   strictDeps = true;
-  nativeBuildInputs = [
-    unzip
-    installShellFiles
-    makeWrapper
-  ] ++ lib.optionals stdenvNoCC.hostPlatform.isLinux [ autoPatchelfHook ];
+  nativeBuildInputs = [ unzip installShellFiles makeWrapper ] ++ lib.optionals stdenvNoCC.hostPlatform.isLinux [ autoPatchelfHook ];
   buildInputs = [ openssl ];
 
   dontConfigure = true;
@@ -51,65 +40,57 @@ stdenvNoCC.mkDerivation rec {
     runHook postInstall
   '';
 
-  postPhases = [ "postPatchelf" ];
+  postPhases = [ "postPatchelf"];
   postPatchelf =
     lib.optionalString stdenvNoCC.hostPlatform.isDarwin ''
-      '${lib.getExe' cctools "${cctools.targetPrefix}install_name_tool"}' $out/bin/bun \
-        -change /usr/lib/libicucore.A.dylib '${lib.getLib darwin.ICU}/lib/libicucore.A.dylib'
-      '${lib.getExe rcodesign}' sign --code-signature-flags linker-signed $out/bin/bun
+      wrapProgram $out/bin/bun \
+        --prefix DYLD_LIBRARY_PATH : ${lib.makeLibraryPath [ darwin.ICU ]}
     ''
     # We currently cannot generate completions for x86_64-darwin because bun requires avx support to run, which is:
     # 1. Not currently supported by the version of Rosetta on our aarch64 builders
     # 2. Is not correctly detected even on macOS 15+, where it is available through Rosetta
     #
     # The baseline builds are no longer an option because they too now require avx support.
-    +
-      lib.optionalString
-        (
-          stdenvNoCC.buildPlatform.canExecute stdenvNoCC.hostPlatform
-          && !(stdenvNoCC.hostPlatform.isDarwin && stdenvNoCC.hostPlatform.isx86_64)
-        )
-        ''
-          completions_dir=$(mktemp -d)
+    + lib.optionalString
+      (
+        stdenvNoCC.buildPlatform.canExecute stdenvNoCC.hostPlatform
+        && !(stdenvNoCC.hostPlatform.isDarwin && stdenvNoCC.hostPlatform.isx86_64)
+      )
+      ''
+        completions_dir=$(mktemp -d)
 
-          SHELL="bash" $out/bin/bun completions $completions_dir
-          SHELL="zsh" $out/bin/bun completions $completions_dir
-          SHELL="fish" $out/bin/bun completions $completions_dir
+        SHELL="bash" $out/bin/bun completions $completions_dir
+        SHELL="zsh" $out/bin/bun completions $completions_dir
+        SHELL="fish" $out/bin/bun completions $completions_dir
 
-          installShellCompletion --name bun \
-            --bash $completions_dir/bun.completion.bash \
-            --zsh $completions_dir/_bun \
-            --fish $completions_dir/bun.fish
-        '';
+        installShellCompletion --name bun \
+          --bash $completions_dir/bun.completion.bash \
+          --zsh $completions_dir/_bun \
+          --fish $completions_dir/bun.fish
+      '';
 
   passthru = {
     sources = {
       "aarch64-darwin" = fetchurl {
         url = "https://github.com/oven-sh/bun/releases/download/bun-v${version}/bun-darwin-aarch64.zip";
-        hash = "sha256-zKnrUnYrvYHriU/IJ1u6CgZU6BqtMY0ZhphUow83aaI=";
+        hash = "sha256-/UcChwu7kRg2RppwOu58HH26/HzY/FgEKbot2hi7WqE=";
       };
       "aarch64-linux" = fetchurl {
         url = "https://github.com/oven-sh/bun/releases/download/bun-v${version}/bun-linux-aarch64.zip";
-        hash = "sha256-G60WcdBboVaWMVynJI7AQ9KbWV/1+xX6hraZwiVdi8U=";
+        hash = "sha256-aUobOa01YPP8fI4KxC3yd9esTyj+NzZGEEAA3f+a6Fw=";
       };
       "x86_64-darwin" = fetchurl {
         url = "https://github.com/oven-sh/bun/releases/download/bun-v${version}/bun-darwin-x64-baseline.zip";
-        hash = "sha256-1/XHbGiaZ/D5pRmDy2EJacwUYhdr2P0BSDwKDBoG9P4=";
+        hash = "sha256-DEMsLgRWkecJwY+ML+C00tkpdO039A5Ih6ZmYyopX8w=";
       };
       "x86_64-linux" = fetchurl {
         url = "https://github.com/oven-sh/bun/releases/download/bun-v${version}/bun-linux-x64.zip";
-        hash = "sha256-kOAyqYKuKZxi1kXaxsqqjrALaQkryFAb8TpZDejQmcg=";
+        hash = "sha256-ity9dM8a8H3DYH6+4yv+WlM1OxrvlRWWN4EYPVxAFYY=";
       };
     };
     updateScript = writeShellScript "update-bun" ''
       set -o errexit
-      export PATH="${
-        lib.makeBinPath [
-          curl
-          jq
-          common-updater-scripts
-        ]
-      }"
+      export PATH="${lib.makeBinPath [ curl jq common-updater-scripts ]}"
       NEW_VERSION=$(curl --silent https://api.github.com/repos/oven-sh/bun/releases/latest | jq '.tag_name | ltrimstr("bun-v")' --raw-output)
       if [[ "${version}" = "$NEW_VERSION" ]]; then
           echo "The new version same as the old version."
@@ -120,27 +101,20 @@ stdenvNoCC.mkDerivation rec {
       done
     '';
   };
-  meta = {
+  meta = with lib; {
     homepage = "https://bun.sh";
     changelog = "https://bun.sh/blog/bun-v${version}";
     description = "Incredibly fast JavaScript runtime, bundler, transpiler and package manager – all in one";
-    sourceProvenance = with lib.sourceTypes; [ binaryNativeCode ];
+    sourceProvenance = with sourceTypes; [ binaryNativeCode ];
     longDescription = ''
       All in one fast & easy-to-use tool. Instead of 1,000 node_modules for development, you only need bun.
     '';
-    license = with lib.licenses; [
+    license = with licenses; [
       mit # bun core
       lgpl21Only # javascriptcore and webkit
     ];
     mainProgram = "bun";
-    maintainers = with lib.maintainers; [
-      DAlperin
-      jk
-      thilobillerbeck
-      cdmistman
-      coffeeispower
-      diogomdp
-    ];
+    maintainers = with maintainers; [ DAlperin jk thilobillerbeck cdmistman coffeeispower diogomdp ];
     platforms = builtins.attrNames passthru.sources;
     # Broken for Musl at 2024-01-13, tracking issue:
     # https://github.com/NixOS/nixpkgs/issues/280716
