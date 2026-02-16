@@ -1029,6 +1029,7 @@ rec {
       layeringPipeline ? null,
       # Enables debug logging for the layering pipeline.
       debug ? false,
+      extraExcludePaths ? [ ],
     }:
     assert (
       lib.assertMsg (layeringPipeline == null -> maxLayers > 1)
@@ -1129,7 +1130,7 @@ rec {
         customisationLayer
       ];
 
-      excludePaths = [
+      excludePaths = extraExcludePaths ++ [
         baseJson
         customisationLayer
       ];
